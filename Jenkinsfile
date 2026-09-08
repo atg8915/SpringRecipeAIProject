@@ -25,7 +25,7 @@ pipeline {
                     )
                 ]) {
                     sh '''
-                        cat > .env << EOF
+                        cat > .env <<-EOF
                         SPRING_PROFILES_ACTIVE=prod
                         POST_URL=${POST_URL}
                         GEN_KEY=${GEN_KEY}
