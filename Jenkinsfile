@@ -104,7 +104,7 @@ pipeline{
 			}
 		}
 		
-		stage('Container Stop')
+		stage('Container Stop'){
 			steps{
 				sh '''
 					docker stop ai-app || true
