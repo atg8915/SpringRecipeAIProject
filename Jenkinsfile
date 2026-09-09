@@ -1,116 +1,46 @@
 pipeline {
-    agent any
-    environment {
-        APP_DIR = "~/app"
-        JAR_NAME = "SpringRecipeAIProject-0.0.1-SNAPSHOT.jar"
-    }
-    stages {
-        stage('Check Out') {
-            steps {
-                echo 'Git CHeckout'
-                checkout scm
-            }
-        }
-
-        stage('Create .env') {
-            steps {
-                withCredentials([
-                    string(
-                        credentialsId: 'post-url',
-                        variable: 'POST_URL'
-                    ),
-                    string(
-                        credentialsId: 'gen-key',
-                        variable: 'GEN_KEY'
-                    )
-                ]) {
-                    sh '''
-				        echo "SPRING_PROFILES_ACTIVE=prod" > .env
-			            echo "POST_URL=${POST_URL}" >> .env
-			            echo "GEN_KEY=${GEN_KEY}" >> .env
-			            
-			            chmod 600 .env
-					   '''
-                }
-            }
-        }
-
-        stage('Gradlew Permission') {
-            steps {
-                sh '''
-                    chmod +x gradlew
-                '''
-            }
-        }
-
-        stage('Gradlew Build') {
-            steps {
-                sh '''
-                    ./gradlew clean build -x test
-                '''
-            }
-        }
-
-        stage('Docker Build') {
-            steps {
-                sh '''
-                    docker build -t atg8915/ai-app:latest .
-                '''
-            }
-        }
-
-        stage('DockerHub Login') {
-            steps {
-                withCredentials([usernamePassword(
-                    credentialsId: 'dockerhub_info',
-                    usernameVariable: 'DH_USER',
-                    passwordVariable: 'DH_PASS'
-                )]) {
-                    sh '''
-                        echo "$DH_PASS" | docker login -u "$DH_USER" --password-stdin
-                    '''
-                }
-            }
-        }
-
-        stage('Docker Push') {
-            steps {
-                sh '''
-                    docker push atg8915/ai-app:latest
-                '''
-            }
-        }
-
-        stage('Container Stop') {
-            steps {
-                sh '''
-                    docker stop ai-app || true
-                '''
-            }
-        }
-
-        stage('Container Remove') {
-            steps {
-                sh '''
-                    docker rm ai-app || true
-                '''
-            }
-        }
-
-        stage('DockerHub Pull') {
-            steps {
-                sh '''
-                    docker pull atg8915/ai-app:latest
-                '''
-            }
-        }
-
-        stage('Docker Run') {
-            steps {
-                sh '''
-                    docker run -d --name ai-app -p 9090:9090 --env-file .env atg8915/ai-app:latest
-                '''
-            }
-        }
-    }
+	/*
+		소기업 : Git Action
+		중소기업 : Jenkins
+		대기업 : 자체 처리
+			= docker , docker-compose
+		전체 동작 : Jenkins = 관리자
+		Git Push
+		   |------ workflows(Git)
+		   |------ WebHook
+		Jenkins
+		   |------ Permission 방지
+		   		   chmod +x gradlew : 실행권한
+		Gradel Build
+		   |------ ./gradlew clean build -x test test제외 jar
+		Docker Build
+		   |------ image만든다 docker build -t image명
+		Docker Hun Push docker push image명
+		   |------ 서버 종료
+		Docker compose down
+		   |
+		Docker compose Pull
+		   |
+		Docker compose up -d
+		 
+	*/
+	agent any
+	environment {
+		APP_DIR = "~/app",
+		JAR_NAME = "SpringRecupeAIProject-0.0.1-SNAPSHOT.jar"
+		DOCKER_IMAGE = "atg8915/ai-app:latest"
+	}
+	// 우분투 (AWS) 명령어 수행
+	stages {
+		// 1. Git Checkout : Repository 확인
+		stage("Repository Checkout"){
+			steps{
+				echo 'Git Checkout'
+				checkout scm
+			}
+		}
+	}
+}
+post {
+	
 }

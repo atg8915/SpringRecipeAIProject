@@ -1,0 +1,11 @@
+version: "3.8"
+services:
+  app:
+   build: .
+   image: atg8915/ai-aoo:latest
+   container_name: ai-app
+   ports:
+     - "9090:9090"
+   restart: always
+   env_file:
+         - .env
