@@ -29,10 +29,10 @@ pipeline {
 	environment {
 		APP_DIR = "~/app"
 		JAR_NAME = "SpringRecipeAIProject-0.0.1-SNAPSHOT.jar"
-		DOCKER_IMAGE = "chaijewon/ai-app:latest"
+		DOCKER_IMAGE = "atg8915/ai-app:latest"
 		// AWS EC2
 		SERVER_USER="ubuntu"
-		SERVER_IP="3.36.16.172"
+		SERVER_IP="16.184.46.118"
 		APP_DIR="/home/ubuntu/app"
 	}
 	// 우분투 (AWS) 명령어 수행 
@@ -135,7 +135,7 @@ pipeline {
 			steps {
 				sh '''
 				    mkdir -p ~/.ssh
-				    ssh-keyscan -H 3.36.16.172 >> ~/.ssh/known_hosts
+				    ssh-keyscan -H 16.184.46.118 >> ~/.ssh/known_hosts
 				    
 				    chmod 644 ~/.ssh/known_hosts
 				   '''
@@ -160,7 +160,7 @@ pipeline {
 					)
 				]){
 					sh '''
-					   ssh -i "$SSH_KEY" -o StrictHostKeyChecking=no ubuntu@3.36.16.172<<EOF 
+					   ssh -i "$SSH_KEY" -o StrictHostKeyChecking=no ubuntu@16.184.46.118<<EOF 
 					   mkdir -p /home/ubuntu/app
 					   
 					   cd /home/ubuntu/app
@@ -190,9 +190,9 @@ pipeline {
 					)
 				]){
 					sh '''
-					    ssh -i "$SSH_KEY" -o StrictHostKeyChecking=no ubuntu@3.36.16.172 "mkdir -p /home/ubuntu/app"
+					    ssh -i "$SSH_KEY" -o StrictHostKeyChecking=no ubuntu@16.184.46.118 "mkdir -p /home/ubuntu/app"
 					    
-					    scp -i "$SSH_KEY" -o StrictHostKeyChecking=no ubuntu@3.36.16.172 docker-compose.yml ubuntu@3.36.16.172:/home/ubuntu/app/docker-compose.yml
+					    scp -i "$SSH_KEY" -o StrictHostKeyChecking=no ubuntu@16.184.46.118 docker-compose.yml ubuntu@16.184.46.118:/home/ubuntu/app/docker-compose.yml
 					   '''
 					   
 				}
@@ -209,7 +209,7 @@ pipeline {
 					)
 				]){
 					sh '''
-					    ssh -i "$SSH_KEY" -o StrictHostKeyChecking=no ubuntu@3.36.16.172<<EOF
+					    ssh -i "$SSH_KEY" -o StrictHostKeyChecking=no ubuntu@16.184.46.118<<EOF
 					    cd /home/ubuntu/app
 					    docker-compose down
 					    docker-compose pull
