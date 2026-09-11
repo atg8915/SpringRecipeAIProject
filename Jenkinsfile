@@ -53,7 +53,7 @@ pipeline {
 			steps {
 				sh '''
 				    java -version
-				   
+				    
 				   '''
 			}
 		}
@@ -159,20 +159,14 @@ pipeline {
 					)
 				]){
 					sh '''
-					   ssh -i "$SSH_KEY" -o StrictHostKeyChecking=no ubuntu@16.184.46.118<<EOF 
-					   mkdir -p /home/ubuntu/app
-					   
-					   cd /home/ubuntu/app
-					   
-					   rm -f .env
-					   
-					   echo "SPRING_PROFILES_ACTIVE=prod" > .env
-					   echo "POST_URL=${POST_URL}" >> .env
-					   echo "GEN_KEY=${GEN_KEY}" >> .env
-					   
-					   chmod 600 .env
-					   
-					   EOF
+					   ssh -i "$SSH_KEY" -o StrictHostKeyChecking=no ubuntu@16.184.46.118 \
+					   "mkdir -p /home/ubuntu/app && \
+					   cd /home/ubuntu/app && \
+					   rm -f .env && \
+					   echo "SPRING_PROFILES_ACTIVE=prod" > .env && \
+					   echo "POST_URL=${POST_URL}" >> .env && \
+					   echo "GEN_KEY=${GEN_KEY}" >> .env && \
+					   chmod 600 .env"
 					   '''
 				}
 			}
