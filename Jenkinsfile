@@ -27,7 +27,6 @@ pipeline {
 	agent any
 	// 변수 설정 
 	environment {
-		APP_DIR = "~/app"
 		JAR_NAME = "SpringRecipeAIProject-0.0.1-SNAPSHOT.jar"
 		DOCKER_IMAGE = "atg8915/ai-app:latest"
 		// AWS EC2
