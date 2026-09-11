@@ -29,7 +29,7 @@ pipeline {
 	environment {
 		APP_DIR = "~/app"
 		JAR_NAME = "SpringRecipeAIProject-0.0.1-SNAPSHOT.jar"
-		DOCKER_IMAGE = "chaijewon/ai-app:latest"
+		DOCKER_IMAGE = "atg8915/ai-app:latest"
 	}
 	// 우분투 (AWS) 명령어 수행 
 	/*
