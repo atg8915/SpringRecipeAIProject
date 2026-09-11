@@ -22,45 +22,32 @@ pipeline {
 		Docker compose Pull
 		   |
 		Docker compose up -d
-		 
 	*/
 	agent any
 	environment {
-		APP_DIR = "~/app"
 		JAR_NAME = "SpringRecupeAIProject-0.0.1-SNAPSHOT.jar"
 		DOCKER_IMAGE = "atg8915/ai-app:latest"
-		// AWS EC2
-		SERVER_USER="ubuntu"
-		SERVER_IP="16.184.46.118"
-		APP_DIR="/home/ubuntu/app"
+		SERVER_USER = "ubuntu"
+		SERVER_IP = "16.184.46.118"
+		APP_DIR = "/home/ubuntu/app"
 	}
-	// 우분투 (AWS) 명령어 수행
-	/*
-		scm
-		  = git-url
-		  = Jenkinsfile 인식
-	*/
 	stages {
-		// 1. Git Checkout : Repository 확인
 		stage("Repository Checkout"){
 			steps{
 				echo 'Git Checkout'
 				checkout scm
 			}
 		}
-		// 2. Java = JDK확인
+
 		stage("JDK21 확인"){
 			steps {
 				sh '''
 					java -version
 					./gradlew --version
-					
 				   '''
 			}
 		}
-		// yml 인식 => ${POST_URL} , api-key : ${GEN_KEY}		
-		
-		// 3. gradlew build => 실행 권한
+
 		stage("Gradle Permission"){
 			steps{
 				sh '''
@@ -68,8 +55,7 @@ pipeline {
 				   '''
 			}
 		}
-		
-		// 4. gradlew build => 배포파일 만들기
+
 		stage("Gradlew Build"){
 			steps {
 				sh '''
@@ -77,17 +63,15 @@ pipeline {
 				   '''
 			}
 		}
-		
-		// 5. Docker Image
+
 		stage("Docker Build"){
 			steps{
 				sh '''
-				  	docker build -t ${DOCKER_IMAGE} .
+					docker build -t ${DOCKER_IMAGE} .
 				   '''
 			}
 		}
-		
-		// 6. Docker Hub Login
+
 		stage("DockerHub Login") {
 			steps{
 				withCredentials([
@@ -103,7 +87,7 @@ pipeline {
 				}
 			}
 		}
-		// 7. Dockerhub Push
+
 		stage("DockerHub Push") {
 			steps {
 				sh '''
@@ -111,8 +95,7 @@ pipeline {
 				   '''
 			}
 		}
-		
-		// 8. SSH KEY 설정 SERVER_SSH_KEY
+
 		stage("SSH Key Setting"){
 			steps {
 				withCredentials([
@@ -130,18 +113,17 @@ pipeline {
 				}
 			}
 		}
-		// 9. AWS 접근
+
 		stage("Known Hosts"){
 			steps{
 				sh '''
 					mkdir -p ~/.ssh
 					ssh-keyscan -H 16.184.46.118 >> ~/.ssh/known_hosts
-					
 					chmod 644 ~/.ssh/known_hosts
 				   '''
 			}
 		}
-		// 10. .env생성
+
 		stage("Create .env"){
 			steps{
 				withCredentials([
@@ -160,48 +142,23 @@ pipeline {
 					)
 				]){
 					sh '''
-					   ssh -i "$SSH_KEY" -o StrickHostKeyChecking=no ubuntu@16.184.46.118
-					   mkdir -p /home/ubuntu/app
-					   
-					   cd /home/ubuntu/app
-					   
-					   rm -f .env
-					   
-					   echo "SPRING_PROFILES_ACTIVE=prod" > .env
-					   echo "POST_URL=${POST_URL}" >> .env
-					   echo "GEN_KEY=${GEN_KEY}" >> .env
-					   
-					   chmod 600 .env
-					   
-					   EOF
+						ssh -i "$SSH_KEY" -o StrictHostKeyChecking=no ubuntu@16.184.46.118 << EOF
+						mkdir -p /home/ubuntu/app
+						cd /home/ubuntu/app
+						rm -f .env
+						echo "SPRING_PROFILES_ACTIVE=prod" > .env
+						echo "POST_URL=${POST_URL}" >> .env
+						echo "GEN_KEY=${GEN_KEY}" >> .env
+						chmod 600 .env
+						EOF
 					   '''
 				}
 			}
 		}
-		
-		// 8. docker-compose.yml 이동
+
 		stage("Copy Docker-compose"){
 			steps{
-				withCredentials([					
-					sshUserPrivateKey(
-						credentialsId: 'SERVER_SSH_KEY',
-						keyFileVariable: 'SSH_KEY',
-						usernameVariable: 'SSH_USER'
-					)
-				]){
-					ssh '''
-						ssh -i "$SSH_KEY" -o StrickHostKeyChecking=no ubuntu@16.184.46.118 "mkdir -p /home/ubuntu/app"
-					   	
-					   	scp -i "$SSH_KEY" -o StrickHostKeyChecking=no ubuntu@16.184.46.118 docker-compose.yml ubuntu@16.184.46.118:/home/ubuntu/app/docker-compose.yml 
-						'''
-		
-				}
-			}
-		}
-		
-		stage("Deploy"){
-			steps {
-				withCredentials([					
+				withCredentials([
 					sshUserPrivateKey(
 						credentialsId: 'SERVER_SSH_KEY',
 						keyFileVariable: 'SSH_KEY',
@@ -209,32 +166,48 @@ pipeline {
 					)
 				]){
 					sh '''
-						ssh -i "$SSH_KEY" -o StrickHostKeyChecking=no ubuntu@16.184.46.118<<EOF
-						cd /home/ubuntu/app
-						docker-compose down
-						docker-compose pull
-						docker-compose up -d
-						
-						EOF
-						
+						ssh -i "$SSH_KEY" -o StrictHostKeyChecking=no ubuntu@16.184.46.118 "mkdir -p /home/ubuntu/app"
+						scp -i "$SSH_KEY" -o StrictHostKeyChecking=no docker-compose.yml ubuntu@16.184.46.118:/home/ubuntu/app/docker-compose.yml
 					   '''
 				}
 			}
 		}
-			
+
+		stage("Deploy"){
+			steps {
+				withCredentials([
+					sshUserPrivateKey(
+						credentialsId: 'SERVER_SSH_KEY',
+						keyFileVariable: 'SSH_KEY',
+						usernameVariable: 'SSH_USER'
+					)
+				]){
+					sh '''
+						ssh -i "$SSH_KEY" -o StrictHostKeyChecking=no ubuntu@16.184.46.118 << EOF
+						cd /home/ubuntu/app
+						docker-compose down
+						docker-compose pull
+						docker-compose up -d
+						EOF
+					   '''
+				}
+			}
+		}
+	}
+
+	post {
+		success {
+			echo '==================='
+			echo 'Docker Compose 배포 성공'
+			echo '==================='
+		}
+		failure {
+			echo '==================='
+			echo 'Docker Compose 배포 실패ㅠ'
+			echo '==================='
+			sh '''
+				docker compose ps || true
+			   '''
+		}
+	}
 } // pipeline 종료
-post {
-	success {
-		echo '==================='
-		echo 'Docker Compose 배포 성공'
-		echo '==================='
-	}
-	failure {
-		echo '==================='
-		echo 'Docker Compose 배포 실패ㅠ'
-		echo '==================='
-	  	sh '''
-	  		docker compose ps || true
-	  	   '''
-	}
-}
