@@ -29,6 +29,10 @@ pipeline {
 		APP_DIR = "~/app"
 		JAR_NAME = "SpringRecupeAIProject-0.0.1-SNAPSHOT.jar"
 		DOCKER_IMAGE = "atg8915/ai-app:latest"
+		// AWS EC2
+		SERVER_USER="ubuntu"
+		SERVER_IP="16.184.46.118"
+		APP_DIR="/home/ubuntu/app"
 	}
 	// 우분투 (AWS) 명령어 수행
 	/*
@@ -44,29 +48,17 @@ pipeline {
 				checkout scm
 			}
 		}
-		// yml 인식 => ${POST_URL} , api-key : ${GEN_KEY}		
-		stage("Create .env"){
-			steps{
-				withCredentials([
-					string(
-						credentialsId: 'post-url',
-						variable: 'POST_URL'
-					),
-					string(
-						credentialsId: 'gen-key',
-						variable: 'GEN_KEY'
-					)
-				]){
-					sh '''
-					   echo "SPRING_PROFILES_ACTIVE=prod" > .env
-					   echo "POST_URL=${POST_URL}" >> .env
-					   echo "GEN_KEY=${GEN_KEY}" >> .env
-					   
-					   chmod 600 .env
-					   '''
-				}
+		// 2. Java = JDK확인
+		stage("JDK21 확인"){
+			steps {
+				sh '''
+					java -version
+					./gradlew --version
+					
+				   '''
 			}
 		}
+		// yml 인식 => ${POST_URL} , api-key : ${GEN_KEY}		
 		
 		// 3. gradlew build => 실행 권한
 		stage("Gradle Permission"){
@@ -120,6 +112,58 @@ pipeline {
 			}
 		}
 		
+		// 8. SSH KEY 설정 SERVER_SSH_KEY
+		stage("SSH Key Setting"){
+			steps {
+				withCredentials([
+					sshUserPrivateKey(
+						credentialsId: 'SERVER_SSH_KEY',
+						keyFileVariable: 'SSH_KEY',
+						usernameVariable: 'SSH_USER'
+					)
+				]){
+					sh '''
+						mkdir -p ~/.ssh
+						cp "$SSH_KEY" ~/.ssh/id_ed25519
+						chmod 600 ~/.ssh/id_ed25519
+					   '''
+				}
+			}
+		}
+		// 9. AWS 접근
+		stage("Known Hosts"){
+			steps{
+				sh '''
+					mkdir -p ~/.ssh
+					ssh-keyscan -H 16.184.46.118 >> ~/.ssh/known_hosts
+					
+					chmod 644 ~/.ssh/known_hosts
+				   '''
+			}
+		}
+		// 10. .env생성
+		tage("Create .env"){
+			steps{
+				withCredentials([
+					string(
+						credentialsId: 'post-url',
+						variable: 'POST_URL'
+					),
+					string(
+						credentialsId: 'gen-key',
+						variable: 'GEN_KEY'
+					)
+				]){
+					sh '''
+					   echo "SPRING_PROFILES_ACTIVE=prod" > .env
+					   echo "POST_URL=${POST_URL}" >> .env
+					   echo "GEN_KEY=${GEN_KEY}" >> .env
+					   
+					   chmod 600 .env
+					   '''
+				}
+			}
+		}
 		// 8. 기존의 Container 종료 = ai-app
 		stage("Docker Compose DOWN") {
 			steps {
