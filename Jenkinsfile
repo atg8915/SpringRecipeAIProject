@@ -142,7 +142,7 @@ pipeline {
 			}
 		}
 		// 10. .env생성
-		tage("Create .env"){
+		stage("Create .env"){
 			steps{
 				withCredentials([
 					string(
@@ -152,53 +152,76 @@ pipeline {
 					string(
 						credentialsId: 'gen-key',
 						variable: 'GEN_KEY'
+					),
+					sshUserPrivateKey(
+						credentialsId: 'SERVER_SSH_KEY',
+						keyFileVariable: 'SSH_KEY',
+						usernameVariable: 'SSH_USER'
 					)
 				]){
 					sh '''
+					   ssh -i "$SSH_KEY" -o StrickHostKeyChecking=no ubuntu@16.184.46.118
+					   mkdir -p /home/ubuntu/app
+					   
+					   cd /home/ubuntu/app
+					   
+					   rm -f .env
+					   
 					   echo "SPRING_PROFILES_ACTIVE=prod" > .env
 					   echo "POST_URL=${POST_URL}" >> .env
 					   echo "GEN_KEY=${GEN_KEY}" >> .env
 					   
 					   chmod 600 .env
+					   
+					   EOF
 					   '''
 				}
 			}
 		}
-		// 8. 기존의 Container 종료 = ai-app
-		stage("Docker Compose DOWN") {
-			steps {
-				sh '''
-				 	docker compose down || true
-				   '''
+		
+		// 8. docker-compose.yml 이동
+		stage("Copy Docker-compose"){
+			steps{
+				withCredentials([					
+					sshUserPrivateKey(
+						credentialsId: 'SERVER_SSH_KEY',
+						keyFileVariable: 'SSH_KEY',
+						usernameVariable: 'SSH_USER'
+					)
+				]){
+					ssh '''
+						ssh -i "$SSH_KEY" -o StrickHostKeyChecking=no ubuntu@16.184.46.118 "mkdir -p /home/ubuntu/app"
+					   	
+					   	scp -i "$SSH_KEY" -o StrickHostKeyChecking=no ubuntu@16.184.46.118 docker-compose.yml ubuntu@16.184.46.118:/home/ubuntu/app/docker-compose.yml 
+						'''
+		
+				}
 			}
 		}
 		
-		// 9. 최신 이미지를 읽어 온다
-		stage("Docker Compose Pull"){
+		stage("Deploy"){
 			steps {
-				sh '''
-					docker compose pull
-				   '''
+				withCredentials([					
+					sshUserPrivateKey(
+						credentialsId: 'SERVER_SSH_KEY',
+						keyFileVariable: 'SSH_KEY',
+						usernameVariable: 'SSH_USER'
+					)
+				]){
+					sh '''
+						ssh -i "$SSH_KEY" -o StrickHostKeyChecking=no ubuntu@16.184.46.118<<EOF
+						cd /home/ubuntu/app
+						docker-compose down
+						docker-compose pull
+						docker-compose up -d
+						
+						EOF
+						
+					   '''
+				}
 			}
 		}
-		// 10 docker compose 실행
-		stage("Docker Compose Up"){
-			steps{
-				sh '''
-				  	docker compose up -d
-				   '''
-			}
-		}
-		// 11. Container Check
-		stage("Container Check"){
-			steps{
-				sh '''
-					docker compose ps
-				   '''
-			}
-		}
-	}
-	
+			
 } // pipeline 종료
 post {
 	success {
